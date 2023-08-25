@@ -3,7 +3,7 @@ CREATE SCHEMA oltp_schema;
 
 /* CREATE TABLES */
 CREATE TABLE IF NOT EXISTS oltp_schema.geolocation (
-    geolocation_zip_code_prefix     INTEGER     PRIMARY KEY,
+    geolocation_zip_code_prefix     CHAR(5)     PRIMARY KEY,
     geolocation_lat                 DOUBLE PRECISION,
     geolocation_lng                 DOUBLE PRECISION,
     geolocation_city                VARCHAR,
@@ -11,12 +11,12 @@ CREATE TABLE IF NOT EXISTS oltp_schema.geolocation (
 );
 CREATE TABLE IF NOT EXISTS oltp_schema.sellers (
     seller_id                   CHAR(32)    PRIMARY KEY,
-    seller_zip_code_prefix      INTEGER     REFERENCES oltp_schema.geolocation (geolocation_zip_code_prefix)
+    seller_zip_code_prefix      CHAR(5)     REFERENCES oltp_schema.geolocation (geolocation_zip_code_prefix)
 );
 CREATE TABLE IF NOT EXISTS oltp_schema.customers (
     customer_id                 CHAR(32)    PRIMARY KEY,
     customer_unique_id          CHAR(32),
-    customer_zip_code_prefix    INTEGER     REFERENCES oltp_schema.geolocation (geolocation_zip_code_prefix)
+    customer_zip_code_prefix    CHAR(5)     REFERENCES oltp_schema.geolocation (geolocation_zip_code_prefix)
 );
 CREATE TABLE IF NOT EXISTS oltp_schema.product_category_name_translation (
     product_category_name           VARCHAR     PRIMARY KEY,
