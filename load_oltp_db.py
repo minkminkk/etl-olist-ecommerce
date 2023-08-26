@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession
+import pyspark.pandas as ps
 import pandas as pd
 import psycopg2 as pg
 import os
@@ -46,56 +47,74 @@ def main():
     
     # Map filenames onto respective PostgreSQL tables
     CSV_TO_TABLE_MAP = {
-        "olist_orders_dataset.csv": "oltp_schema.orders",
-        "olist_order_items_dataset.csv": "oltp_schema.order_items",
-        "olist_order_payments_dataset.csv": "oltp_schema.order_payments",
-        "olist_order_reviews_dataset.csv": "oltp_schema.order_reviews",
-        "olist_customers_dataset.csv": "oltp_schema.customers",
-        "olist_products_dataset.csv": "oltp_schema.products",
-        "product_category_name_translation.csv": "oltp_schema.product_category_name_translation",
+        "olist_geolocation_dataset.csv": "oltp_schema.geolocation",
         "olist_sellers_dataset.csv": "oltp_schema.sellers",
-        "olist_geolocation_dataset.csv": "oltp_schema.geolocation"
+        "olist_customers_dataset.csv": "oltp_schema.customers",
+        "product_category_name_translation.csv": "oltp_schema.product_category_name_translation",
+        "olist_products_dataset.csv": "oltp_schema.products",
+        "olist_orders_dataset.csv": "oltp_schema.orders",
+        "olist_order_reviews_dataset.csv": "oltp_schema.order_reviews",
+        "olist_order_payments_dataset.csv": "oltp_schema.order_payments",
+        "olist_order_items_dataset.csv": "oltp_schema.order_items"
     }
-
-    # File list: To avoid FK constraint violation when loading data
-    FILE_LIST = [
-        "olist_geolocation_dataset.csv",
-        "olist_sellers_dataset.csv",
-        "olist_customers_dataset.csv",
-        "product_category_name_translation.csv",
-        "olist_products_dataset.csv",
-        "olist_orders_dataset.csv",
-        "olist_order_reviews_dataset.csv",
-        "olist_order_payments_dataset.csv",
-        "olist_order_items_dataset.csv"
-    ]
 
     # Load data to tables from csv files
     with ZipFile(path_zip, 'r') as zip_file:
-        for file_name in FILE_LIST:
+        for file_name in CSV_TO_TABLE_MAP:  # Must open csv files in this order to avoid violating FK constraints
                 with zip_file.open(file_name, 'r') as csv_file:
-                    # Create DataFrame via pd.DataFrame because spark does not support
-                    # reading from raw csv string
-                    spark_df = spark.createDataFrame(pd.read_csv(csv_file))
-                    
-                    # Remove redundant columns in customers & sellers table
-                    if file_name == 'olist_customers_dataset.csv':
-                        spark_df = spark_df.drop('customer_city', 'customer_state')
-                    if file_name == 'olist_sellers_dataset.csv':
-                        spark_df = spark_df.drop('seller_city', 'seller_state')
+                    """
+                    Spark DataFrames are created via pd.DataFrame because Spark 
+                    does not support reading from raw csv text
+                    """
+                    print('--------- Processing', file_name, '---------')
+                    # Manually cast 'zip_code_prefix' to str to avoid wrong data type infer 
+                    if file_name == 'olist_geolocation_dataset.csv':
+                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                            dtype = {'geolocation_zip_code_prefix': str}
+                        ))
+                        spark_df = spark_df.groupby('geolocation_zip_code_prefix') \
+                            .agg(
+                                {
+                                    'geolocation_lat': 'avg',
+                                    'geolocation_lng': 'avg',
+                                    'geolocation_city': 'first',
+                                    'geolocation_state': 'first'
+                                }
+                            ).collect()
+                        # Create new spark_df to write into Postgres from list of Rows 
+                        # with aggregate columns renamed
+                        spark_df = spark.createDataFrame(spark_df) \
+                            .withColumnRenamed('avg(geolocation_lat)', 'geolocation_lat') \
+                            .withColumnRenamed('avg(geolocation_lng)', 'geolocation_lng') \
+                            .withColumnRenamed('first(geolocation_city)', 'geolocation_city') \
+                            .withColumnRenamed('first(geolocation_state)', 'geolocation_state')
+                        
+                    elif file_name == 'olist_customers_dataset.csv':
+                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                            usecols = ['customer_id', 'customer_unique_id', 'customer_zip_code_prefix'],
+                            dtype = {'customer_zip_code_prefix': str}
+                        ))
 
-                    # Load data from csv into PostgreSQL
-                    spark_df.write.format('jdbc').mode('append') \
-                        .option('url', 'jdbc:postgresql://localhost:5432/olist-ecommerce', ) \
-                        .option('driver', 'org.postgresql.Driver') \
-                        .option('dbtable', CSV_TO_TABLE_MAP[file_name]) \
-                        .option('batchsize', 1000) \
-                        .option('user', 'postgres') \
-                        .option('password', '1234') \
-                        .save()
-                    
-                    ## TODO: Analyze data (geolocation table - zip code prefix) 
+                    elif file_name == 'olist_sellers_dataset.csv':
+                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                            usecols = ['seller_id', 'seller_zip_code_prefix'],
+                            dtype = {'seller_zip_code_prefix': str}
+                        ))
 
+                    else:
+                        spark_df = spark.createDataFrame(pd.read_csv(csv_file))
+
+                    # Load data from csv into Postgres
+                    try:
+                        spark_df.write.format('jdbc').mode('append') \
+                            .option('url', 'jdbc:postgresql://localhost:5432/olist-ecommerce', ) \
+                            .option('driver', 'org.postgresql.Driver') \
+                            .option('dbtable', CSV_TO_TABLE_MAP[file_name]) \
+                            .option('user', 'postgres') \
+                            .option('password', '1234') \
+                            .save()
+                    except:
+                        continue
     
 if __name__ == '__main__':
     main()
