@@ -105,7 +105,7 @@ def main():
 
                     # Load data from csv into Postgres
                     spark_df.write.format('jdbc').mode('append') \
-                        .option('url', 'jdbc:postgresql://localhost:5432/olist-ecommerce', ) \
+                        .option('url', 'jdbc:postgresql://localhost:5432/olist', ) \
                         .option('driver', 'org.postgresql.Driver') \
                         .option('dbtable', CSV_TO_TABLE_MAP[file_name]) \
                         .option('user', 'postgres') \
