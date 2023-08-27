@@ -65,7 +65,6 @@ def main():
                     Spark DataFrames are created via pd.DataFrame because Spark 
                     does not support reading from raw csv text
                     """
-                    print('--------- Processing', file_name, '---------')
                     # Manually cast 'zip_code_prefix' to str to avoid wrong data type infer 
                     if file_name == 'olist_geolocation_dataset.csv':
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file,
