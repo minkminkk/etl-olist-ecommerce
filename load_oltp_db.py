@@ -1,5 +1,4 @@
 from pyspark.sql import SparkSession
-import pyspark.pandas as ps
 import pandas as pd
 import psycopg2 as pg
 import os
@@ -12,13 +11,13 @@ def main():
 
     Input files: 
     - olist-data.zip
-    - schemas/oltp_schema.sql
+    - schemas/source_schema.sql
     """
     # Create OLTP schema
     try:
         # Connect to OLTP database, config and create cursor
         conn = pg.connect(
-            database = 'olist-ecommerce',
+            database = 'olist',
             user = 'postgres',
             password = '1234'
         )
@@ -26,7 +25,7 @@ def main():
         cur = conn.cursor()
 
         # Read and execute script for creating OLTP schema
-        with open(os.path.join(os.path.dirname(__file__), 'schemas/oltp_schema.sql'), 'r') as script:
+        with open(os.path.join(os.path.dirname(__file__), 'schemas/source_schema.sql'), 'r') as script:
             script = script.read()
             cur.execute(script)
     except:
@@ -47,15 +46,15 @@ def main():
     
     # Map filenames onto respective PostgreSQL tables
     CSV_TO_TABLE_MAP = {
-        "olist_geolocation_dataset.csv": "oltp_schema.geolocation",
-        "olist_sellers_dataset.csv": "oltp_schema.sellers",
-        "olist_customers_dataset.csv": "oltp_schema.customers",
-        "product_category_name_translation.csv": "oltp_schema.product_category_name_translation",
-        "olist_products_dataset.csv": "oltp_schema.products",
-        "olist_orders_dataset.csv": "oltp_schema.orders",
-        "olist_order_reviews_dataset.csv": "oltp_schema.order_reviews",
-        "olist_order_payments_dataset.csv": "oltp_schema.order_payments",
-        "olist_order_items_dataset.csv": "oltp_schema.order_items"
+        "olist_geolocation_dataset.csv": "geolocation",
+        "olist_sellers_dataset.csv": "sellers",
+        "olist_customers_dataset.csv": "customers",
+        "product_category_name_translation.csv": "product_category_name_translation",
+        "olist_products_dataset.csv": "products",
+        "olist_orders_dataset.csv": "orders",
+        "olist_order_reviews_dataset.csv": "order_reviews",
+        "olist_order_payments_dataset.csv": "order_payments",
+        "olist_order_items_dataset.csv": "order_items"
     }
 
     # Load data to tables from csv files
@@ -105,16 +104,15 @@ def main():
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file))
 
                     # Load data from csv into Postgres
-                    try:
-                        spark_df.write.format('jdbc').mode('append') \
-                            .option('url', 'jdbc:postgresql://localhost:5432/olist-ecommerce', ) \
-                            .option('driver', 'org.postgresql.Driver') \
-                            .option('dbtable', CSV_TO_TABLE_MAP[file_name]) \
-                            .option('user', 'postgres') \
-                            .option('password', '1234') \
-                            .save()
-                    except:
-                        continue
+                    spark_df.write.format('jdbc').mode('append') \
+                        .option('url', 'jdbc:postgresql://localhost:5432/olist-ecommerce', ) \
+                        .option('driver', 'org.postgresql.Driver') \
+                        .option('dbtable', CSV_TO_TABLE_MAP[file_name]) \
+                        .option('user', 'postgres') \
+                        .option('password', '1234') \
+                        .save()
+                    ## TODO: Handle seller zip code non-existent in geolocation table
+
     
 if __name__ == '__main__':
     main()
