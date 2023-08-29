@@ -7,7 +7,6 @@ import os
 def main():
     # Create SparkSession
     spark = SparkSession.builder \
-        .config('spark.jars', '/usr/local/postgresql-42.6.0.jar') \
         .appName('Data load - source to OLTP database') \
         .getOrCreate()
     
@@ -45,25 +44,28 @@ def main():
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file,
                             dtype = {'geolocation_zip_code_prefix': str}
                         ))
-                        
                     elif file_name == 'olist_customers_dataset.csv':
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file,
                             dtype = {'customer_zip_code_prefix': str}
                         ))
-
                     elif file_name == 'olist_sellers_dataset.csv':
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file,
                             dtype = {'seller_zip_code_prefix': str}
                         ))
-
                     else:
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file))
 
-                    # Load data from csv into Postgres
-                    spark_df.write \
-                        .parquet('hdfs://0.0.0.0:9000/data_lake' + CSV_TO_TABLE_MAP[file_name]) \
-                        .mode('append') 
-                    # TODO: Solve right to write data onto HDFS
+                    # Specify directory for each table and create directory if not exist
+                    dir_path = '/data_lake/' + CSV_TO_TABLE_MAP[file_name]
+                    dir_path_full = 'hdfs://localhost:9000' + dir_path
+
+                    if not fs.exists(jvm.org.apache.hadoop.fs.Path(dir_path)):
+                        # TODO: Fix bug: mkdirs executes successfully but no directory was created
+                        fs.mkdirs(jvm.org.apache.hadoop.fs.Path(dir_path))
+                        print('Created directory', dir_path)
+
+                    # Load data into specified path in HDFS
+                    # spark_df.write.parquet(dir_path_full).mode('append') 
 
 
 if __name__ == '__main__':
