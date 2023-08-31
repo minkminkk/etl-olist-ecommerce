@@ -10,13 +10,13 @@ def main():
         .appName('Data load - source to OLTP database') \
         .getOrCreate()
     
-    # Generate gateway to JVM and proxy into JSC
+    # Generate FileSystem
     sc = spark.sparkContext
     jvm = sc._jvm
     jsc = sc._jsc
     conf = jsc.hadoopConfiguration()
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
-    
+
     # TODO: Get latest record in datalake
 
 
@@ -34,8 +34,7 @@ def main():
         "olist_order_payments_dataset.csv": "order_payments",
         "olist_order_items_dataset.csv": "order_items"
     }
-    
-    # Load data to tables from csv files
+
     with ZipFile(path_zip, 'r') as zip_file:
         for file_name in zip_file.namelist():
                 with zip_file.open(file_name, 'r') as csv_file:
@@ -56,16 +55,17 @@ def main():
                         spark_df = spark.createDataFrame(pd.read_csv(csv_file))
 
                     # Specify directory for each table and create directory if not exist
-                    dir_path = '/data_lake/' + CSV_TO_TABLE_MAP[file_name]
-                    dir_path_full = 'hdfs://localhost:9000' + dir_path
+                    tbl_name = CSV_TO_TABLE_MAP[file_name]
+                    dir_path = '/data_lake/' + tbl_name 
+                    dir_path_hdfs = jvm.org.apache.hadoop.fs.Path(dir_path)
+                    dir_path_url = 'hdfs://localhost:9000' + dir_path
 
-                    if not fs.exists(jvm.org.apache.hadoop.fs.Path(dir_path)):
+                    if not fs.exists(dir_path_hdfs):
                         # TODO: Fix bug: mkdirs executes successfully but no directory was created
-                        fs.mkdirs(jvm.org.apache.hadoop.fs.Path(dir_path))
-                        print('Created directory', dir_path)
+                        print('Creating:', CSV_TO_TABLE_MAP[file_name], fs.mkdirs(dir_path_hdfs))
 
-                    # Load data into specified path in HDFS
-                    # spark_df.write.parquet(dir_path_full).mode('append') 
+                    # # Load data into specified path in HDFS
+                    # spark_df.write.mode('append').format('parquet').save()
 
 
 if __name__ == '__main__':
