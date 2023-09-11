@@ -7,7 +7,7 @@ import os
 def main():
     # Create SparkSession
     spark = SparkSession.builder \
-        .appName('Data load - source to OLTP database') \
+        .appName("Data load - source to olist database") \
         .getOrCreate()
     
     # Generate FileSystem
@@ -16,7 +16,7 @@ def main():
     jsc = sc._jsc
     conf = jsc.hadoopConfiguration()
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
-
+    
     # TODO: Get latest record in datalake
 
 
@@ -37,35 +37,31 @@ def main():
 
     with ZipFile(path_zip, 'r') as zip_file:
         for file_name in zip_file.namelist():
-                with zip_file.open(file_name, 'r') as csv_file:
-                    # Manually cast data types to some column to avoid wrong inferring
-                    if file_name == 'olist_geolocation_dataset.csv':
-                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
-                            dtype = {'geolocation_zip_code_prefix': str}
-                        ))
-                    elif file_name == 'olist_customers_dataset.csv':
-                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
-                            dtype = {'customer_zip_code_prefix': str}
-                        ))
-                    elif file_name == 'olist_sellers_dataset.csv':
-                        spark_df = spark.createDataFrame(pd.read_csv(csv_file,
-                            dtype = {'seller_zip_code_prefix': str}
-                        ))
-                    else:
-                        spark_df = spark.createDataFrame(pd.read_csv(csv_file))
+            with zip_file.open(file_name, 'r') as csv_file:
+                # Manually cast data types to some column to avoid wrong inferring
+                if file_name == 'olist_geolocation_dataset.csv':
+                    spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                        dtype = {'geolocation_zip_code_prefix': str}
+                    ))
+                elif file_name == 'olist_customers_dataset.csv':
+                    spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                        dtype = {'customer_zip_code_prefix': str}
+                    ))
+                elif file_name == 'olist_sellers_dataset.csv':
+                    spark_df = spark.createDataFrame(pd.read_csv(csv_file,
+                        dtype = {'seller_zip_code_prefix': str}
+                    ))
+                else:
+                    spark_df = spark.createDataFrame(pd.read_csv(csv_file))
 
-                    # Specify directory for each table and create directory if not exist
-                    tbl_name = CSV_TO_TABLE_MAP[file_name]
-                    dir_path = '/data_lake/' + tbl_name 
-                    dir_path_hdfs = jvm.org.apache.hadoop.fs.Path(dir_path)
-                    dir_path_url = 'hdfs://localhost:9000' + dir_path
+                # Specify directory for each table and create directory if not exist
+                tbl_name = CSV_TO_TABLE_MAP[file_name]
+                dir_path = '/data_lake/' + tbl_name 
+                dir_path_hdfs = jvm.org.apache.hadoop.fs.Path(dir_path)
+                dir_path_url = 'hdfs://localhost:9000' + dir_path
 
-                    if not fs.exists(dir_path_hdfs):
-                        # TODO: Fix bug: mkdirs executes successfully but no directory was created
-                        print('Creating:', CSV_TO_TABLE_MAP[file_name], fs.mkdirs(dir_path_hdfs))
-
-                    # # Load data into specified path in HDFS
-                    # spark_df.write.mode('append').format('parquet').save()
+                # Load data into specified path in HDFS
+                spark_df.write.mode('append').format('parquet').save()
 
 
 if __name__ == '__main__':
