@@ -1,2 +1,4 @@
+# Will remove py_venv from .gitignore later
 py_venv
 __pycache__
+requirements.txt
