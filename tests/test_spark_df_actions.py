@@ -7,24 +7,22 @@ class PySparkDFTest(unittest.TestCase):
     """
     Test for PySpark DataFrame actions
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.spark = SparkSession.builder \
+    def setUp(self):
+        self.spark = SparkSession.builder \
             .appName('Test for PySpark DataFrame actions') \
             .master('local[1]') \
             .config('spark.driver.memory', '512M') \
             .getOrCreate()
     
-    @classmethod
-    def tearDownClass(cls):
-        cls.spark.stop()
+    def tearDown(self):
+        self.spark.stop()
 
     def test_pyspark_action(self):
         df = self.spark.createDataFrame([
             Row(letter='a', num=1),
             Row(letter='b', num=2)
         ])
-        df.collect()
+        self.assertEqual(df.collect(), [Row(letter='a', num=1), Row(letter='b', num=2)])
 
 
 if __name__ == '__main__':
