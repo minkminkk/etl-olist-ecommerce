@@ -16,7 +16,7 @@ def main():
     jsc = sc._jsc
     conf = jsc.hadoopConfiguration()
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
-    
+
     # TODO: Get latest record in datalake
 
 
@@ -56,12 +56,11 @@ def main():
 
                 # Specify directory for each table and create directory if not exist
                 tbl_name = CSV_TO_TABLE_MAP[file_name]
-                dir_path = '/data_lake/' + tbl_name 
-                dir_path_hdfs = jvm.org.apache.hadoop.fs.Path(dir_path)
+                dir_path = '/data_lake/' + tbl_name
                 dir_path_url = 'hdfs://localhost:9000' + dir_path
 
                 # Load data into specified path in HDFS
-                spark_df.write.mode('append').format('parquet').save()
+                spark_df.write.mode('append').parquet(dir_path_url) #TODO: Reduce load for each executor
 
 
 if __name__ == '__main__':
