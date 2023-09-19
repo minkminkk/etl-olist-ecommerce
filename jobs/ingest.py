@@ -15,7 +15,9 @@ def main(tbl_names: List[str], ingestion_date: str):
 
     Arguments:
     - --tbl_names: Name of tables to be executed.
+        All tables (specified in utils/misc.py) if not provided.
     - --ingestion_date: Date where we want to update data.
+        Execution date if not provided.
     """
     # Table name validation
     for tbl_name in tbl_names:
@@ -82,7 +84,7 @@ if __name__ == '__main__':
     
     if not args.tbl_names:  # Execute on all tables if --tbl_names not provided
         args.tbl_names = misc.get_available_tbl_names()
-    if not args.ingestion_date:
+    if not args.ingestion_date: # Execute on current date if --ingestion_date not provided
         args.ingestion_date = datetime.date.today().strftime('%Y-%m-%d')
     else:
         main(args.tbl_names, args.ingestion_date)
