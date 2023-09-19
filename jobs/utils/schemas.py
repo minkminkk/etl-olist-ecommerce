@@ -1,7 +1,7 @@
 from typing import Literal, get_args
 from pyspark.sql.types import StructType, StructField, \
     StringType, ByteType, ShortType, IntegerType, FloatType, TimestampType, DateType
-import utils
+from . import misc
 
 
 class IngestionSchema:
@@ -9,7 +9,7 @@ class IngestionSchema:
     Class to generate schema by given table name.
 
     Property:
-    - tblname: Name of table to get schema. Raise ValueError if table name does not exist.
+    - tbl_name: Name of table to get schema. Raise ValueError if table name does not exist.
 
     Method:
     - as_StructType(): Returns schema of the specified table as Spark's StructType.
@@ -87,10 +87,10 @@ class IngestionSchema:
         ])
     }
 
-    def __init__(self, tblname: str):
-        if tblname not in utils.get_ingestion_tblnames():
+    def __init__(self, tbl_name: str):
+        if tbl_name not in misc.get_available_tbl_names():
             raise ValueError('Table name is not available')
-        self.tblname = tblname
+        self.tbl_name = tbl_name
 
     def as_StructType(self):
-        return self._schemas_StructType[self.tblname]
+        return self._schemas_StructType[self.tbl_name]

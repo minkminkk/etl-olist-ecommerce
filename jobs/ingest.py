@@ -1,13 +1,33 @@
 from pyspark.sql import SparkSession
-from jobs.utils import schemas
-from typing import List, Union
-import utils.utils as utils
+from utils import schemas
+from typing import List
+from utils import misc
 import os
+import datetime
 import argparse
 
-def main(tblname: Union[str, List[str]], ingest_date: str):
-    # Process arguments
 
+def main(tbl_names: List[str], ingestion_date: str):
+    """
+    Read input csv files for the specified table names. Induce new records and write them into HDFS.
+
+    Used via spark-submit, requires providing additional arguments.
+
+    Arguments:
+    - --tbl_names: Name of tables to be executed.
+    - --ingestion_date: Date where we want to update data.
+    """
+    # Table name validation
+    for tbl_name in tbl_names:
+        if tbl_name not in misc.get_available_tbl_names():
+            msg = 'Invalid table name: ' + tbl_name
+            raise ValueError(msg)
+    
+    # Date validation
+    date_format = '%Y-%m-%d'    # refer to datetime format codes
+    ingestion_date = datetime.datetime.strptime(ingestion_date, date_format)  # raises ValueError if cannot parse date
+    if ingestion_date.date() > datetime.date.today():
+        raise ValueError('Cannot ingest data from the future')
     
     # Create SparkSession
     spark = SparkSession.builder \
@@ -21,14 +41,15 @@ def main(tblname: Union[str, List[str]], ingest_date: str):
     conf = jsc.hadoopConfiguration()
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
 
-    # Write each csv file into HDFS
+    # Working directories
     path_wd = os.path.dirname(os.path.dirname(__file__))
     path_data = os.path.join(path_wd, 'data')
     
-    for file_name in os.listdir(path_data):
+    # Ingest csv data into HDFS for specified tables
+    for tbl_name in tbl_names:
+        # TODO: Implement so able to ingest by selected date
         # HDFS directory for each table
-        path_csv = 'file://' + os.path.join(path_data, file_name)   # to specify files in local storage
-        tbl_name = utils.get_ingestion_tblname_from_csvname(file_name)
+        path_csv = 'file://' + os.path.join(path_data, misc.get_csvname_from_tblname(tbl_name))   # to specify files in local storage
         tbl_schema = schemas.IngestionSchema(tbl_name).as_StructType()
         path_hdfs_dir = '/data_lake/' + tbl_name
         path_hdfs_dir_uri = 'hdfs://localhost:9000' + path_hdfs_dir
@@ -54,7 +75,14 @@ def main(tblname: Union[str, List[str]], ingest_date: str):
 
 
 if __name__ == '__main__':
-    import time
-    start_time = time.time()
-    main()
-    print('Execution time:', time.time() - start_time)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--tbl_names', type = str, nargs = '*')
+    parser.add_argument('--ingestion_date', type = str)
+    args = parser.parse_args()
+    
+    if not args.tbl_names:  # Execute on all tables if --tbl_names not provided
+        args.tbl_names = misc.get_available_tbl_names()
+    if not args.ingestion_date:
+        args.ingestion_date = datetime.date.today().strftime('%Y-%m-%d')
+    else:
+        main(args.tbl_names, args.ingestion_date)
