@@ -14,10 +14,10 @@ def main(tbl_names: List[str], ingestion_date: str):
     Used via spark-submit, requires providing additional arguments.
 
     Arguments:
-    - --tbl_names: Name of tables to be executed.
-        All tables (specified in utils/misc.py) if not provided.
-    - --ingestion_date: Date where we want to update data.
-        Execution date if not provided.
+    - tbl_names: Name of tables to be executed.
+    Input all available tables (specified in ./utils/misc.py) if not provided.
+    - ingestion_date: Date where we want to update data.
+    Input execution date if not provided.
     """
     # Table name validation
     for tbl_name in tbl_names:
