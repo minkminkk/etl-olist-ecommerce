@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import count
 from schemas import ingest_schemas
-from utils import ingest_utils
+import utils
 import os
 
 
@@ -25,7 +25,7 @@ def main():
     for file_name in os.listdir(path_data):
         # HDFS directory for each table
         path_csv = 'file://' + os.path.join(path_data, file_name)   # to specify files in local storage
-        tbl_name = ingest_utils.get_tblname_from_csvname(file_name)
+        tbl_name = utils.get_tblname_from_csvname(file_name)
         tbl_schema = ingest_schemas.IngestionSchema(tbl_name).as_StructType()
         path_hdfs_dir = '/data_lake/' + tbl_name
         path_hdfs_dir_uri = 'hdfs://localhost:9000' + path_hdfs_dir

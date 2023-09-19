@@ -25,21 +25,4 @@ def get_tblname_from_csvname(csvname:str) -> str:
         'olist_order_items_dataset.csv': 'order_items'
     }
 
-    return CSVNAME_TBLNAME_MAP.get(csvname, None)
-
-
-def get_StructType_from_tblname(tblname:str) -> pyspark.sql.types.StructType:
-    """
-    Generate StructType for the respective table name at ingestion
-
-    Arguments:
-    - tblname: Name of table within available tables
-    
-    Returns:
-    - The respective StructType if tblname exists
-    - None otherwise
-    """
-
-
-
-    
+    return CSVNAME_TBLNAME_MAP.get(csvname, None)    
