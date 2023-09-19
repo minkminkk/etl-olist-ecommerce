@@ -22,8 +22,7 @@ def main(tbl_names: List[str], ingestion_date: str):
     # Table name validation
     for tbl_name in tbl_names:
         if tbl_name not in misc.get_available_tbl_names():
-            msg = 'Invalid table name: ' + tbl_name
-            raise ValueError(msg)
+            raise ValueError('Table names must be within allowed values: misc.get_available_tbl_names()')
     
     # Date validation
     date_format = '%Y-%m-%d'    # refer to datetime format codes
