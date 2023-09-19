@@ -1,32 +1,14 @@
-#TODO: StructType for csv read into tables
-
 from typing import Literal, get_args
 from pyspark.sql.types import StructType, StructField, \
     StringType, ByteType, ShortType, IntegerType, FloatType, TimestampType, DateType
+import utils
 
-
-"""
-Define schemas for tables at Ingestion stage as Spark StructType
-for reading csv files
-"""
-# The available table names
-AvailableTblnames = Literal[
-    'customers', 
-    'geolocation', 
-    'orders', 
-    'order_items',
-    'order_payments', 
-    'order_reviews', 
-    'products', 
-    'product_category_name_translation',
-    'sellers' 
-]
 
 class IngestionSchema:
     """
-    Class to generate schema by given table name
+    Class to generate schema by given table name.
 
-    Argument:
+    Property:
     - tblname: Name of table to get schema. Raise ValueError if table name does not exist.
 
     Method:
@@ -105,8 +87,8 @@ class IngestionSchema:
         ])
     }
 
-    def __init__(self, tblname: Literal[AvailableTblnames]):
-        if tblname not in get_args(AvailableTblnames):
+    def __init__(self, tblname: str):
+        if tblname not in utils.get_ingestion_tblnames():
             raise ValueError('Table name is not available')
         self.tblname = tblname
 
