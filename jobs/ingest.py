@@ -3,23 +3,19 @@ from utils import schemas
 from typing import List
 from utils import misc
 import os
-import datetime
 import argparse
 
 
-def main(tbl_names: List[str], ingestion_date: str):
+def main(tbl_names: List[str]):
     """
     Read input csv files for the specified table names. Induce new records and write them into HDFS.
 
     Arguments:
     - tbl_names: Name of tables to be executed.
     Input all available tables (specified in ./utils/misc.py) if not provided.
-    - ingestion_date: Date where we want to update data.
-    Input execution date if not provided.
 
     Exceptions:
     - If any tbl_name not available: ValueError.
-    - If ingestion_date later than the execution date: ValueError.
 
     Usage: spark-submit ingest.py
     """
@@ -27,12 +23,6 @@ def main(tbl_names: List[str], ingestion_date: str):
     for tbl_name in tbl_names:
         if tbl_name not in misc.get_available_tbl_names():
             raise ValueError('Table names must be within allowed values: misc.get_available_tbl_names()')
-    
-    # Date validation
-    date_format = '%Y-%m-%d'    # refer to datetime format codes
-    ingestion_date = datetime.datetime.strptime(ingestion_date, date_format)  # raises ValueError if cannot parse date
-    if ingestion_date.date() > datetime.date.today():
-        raise ValueError('Cannot ingest data from the future')
     
     # Create SparkSession
     spark = SparkSession.builder \
@@ -52,7 +42,6 @@ def main(tbl_names: List[str], ingestion_date: str):
     
     # Ingest csv data into HDFS for specified tables
     for tbl_name in tbl_names:
-        # TODO: Implement so able to ingest by selected date
         # HDFS directory for each table
         path_csv = 'file://' + os.path.join(path_data, misc.get_csvname_from_tblname(tbl_name))   # to specify files in local storage
         tbl_schema = schemas.IngestionSchema(tbl_name).as_StructType()
@@ -61,7 +50,7 @@ def main(tbl_names: List[str], ingestion_date: str):
 
         print('==================== PROCESSING', tbl_name, '====================')
 
-        # Read input csv file
+        # Read input csv file 
         spark_df = spark.read.csv(path_csv, header = True, schema = tbl_schema)
         
         # Get latest records in data lake, return empty dataframe with schema if records not found
@@ -82,12 +71,12 @@ def main(tbl_names: List[str], ingestion_date: str):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--tbl_names', type = str, nargs = '*')
-    parser.add_argument('--ingestion_date', type = str)
     args = parser.parse_args()
     
     if not args.tbl_names:  # Execute on all tables if --tbl_names not provided
         args.tbl_names = misc.get_available_tbl_names()
-    if not args.ingestion_date: # Execute on current date if --ingestion_date not provided
-        args.ingestion_date = datetime.date.today().strftime('%Y-%m-%d')
     
-    main(args.tbl_names, args.ingestion_date)
+    import time
+    start_time = time.time()
+    main(args.tbl_names)
+    print('Execution time:', time.time() - start_time)
