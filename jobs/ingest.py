@@ -11,13 +11,17 @@ def main(tbl_names: List[str], ingestion_date: str):
     """
     Read input csv files for the specified table names. Induce new records and write them into HDFS.
 
-    Used via spark-submit, requires providing additional arguments.
-
     Arguments:
     - tbl_names: Name of tables to be executed.
     Input all available tables (specified in ./utils/misc.py) if not provided.
     - ingestion_date: Date where we want to update data.
     Input execution date if not provided.
+
+    Exceptions:
+    - If any tbl_name not available: ValueError.
+    - If ingestion_date later than the execution date: ValueError.
+
+    Usage: spark-submit ingest.py
     """
     # Table name validation
     for tbl_name in tbl_names:
@@ -35,7 +39,7 @@ def main(tbl_names: List[str], ingestion_date: str):
         .appName('Data load - source to olist database') \
         .getOrCreate()
     
-    # Generate FileSystem
+    # Get FileSystem (specified by fs.defaultFS in core-site.xml - HDFS desired)
     sc = spark.sparkContext
     jvm = sc._jvm
     jsc = sc._jsc
@@ -85,5 +89,5 @@ if __name__ == '__main__':
         args.tbl_names = misc.get_available_tbl_names()
     if not args.ingestion_date: # Execute on current date if --ingestion_date not provided
         args.ingestion_date = datetime.date.today().strftime('%Y-%m-%d')
-    else:
-        main(args.tbl_names, args.ingestion_date)
+    
+    main(args.tbl_names, args.ingestion_date)
