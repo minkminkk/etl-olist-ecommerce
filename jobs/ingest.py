@@ -55,9 +55,9 @@ def main(tbl_names: List[str]):
         
         # Get latest records in data lake, return empty dataframe with schema if records not found
         if fs.exists(jvm.org.apache.hadoop.fs.Path(path_hdfs_dir + '/_SUCCESS')):
-            df_latest = spark.read.parquet(path_hdfs_dir_uri, header = True, schema = tbl_schema)
+            df_latest = spark.read.parquet(path_hdfs_dir_uri, schema = tbl_schema)
         else:
-            df_latest = spark.createDataFrame(sc.emptyRDD(), schema = tbl_schema)
+            df_latest = spark.createDataFrame([], schema = tbl_schema)
 
         # Load new records into data lake if there are any
         new_records = spark_df.subtract(df_latest)
@@ -65,7 +65,7 @@ def main(tbl_names: List[str]):
             new_records.write.mode('append').parquet(path_hdfs_dir_uri)
             print('>>>>> Updated', tbl_name)
         else:
-            print('>>>>>', tbl_name, 'already up to date')
+            print('>>>>>', tbl_name, 'already up to date') 
 
 
 if __name__ == '__main__':
@@ -79,4 +79,4 @@ if __name__ == '__main__':
     import time
     start_time = time.time()
     main(args.tbl_names)
-    print('Execution time:', time.time() - start_time)
+    print('>>>>> Execution time:', time.time() - start_time)
