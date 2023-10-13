@@ -1,6 +1,7 @@
 from typing import List
 from pyspark.sql.types import StructType, StructField, \
     StringType, ByteType, ShortType, IntegerType, FloatType, TimestampType, DateType
+import os
 
 
 # This file reorganize information of tables at Ingestion stage.
@@ -9,18 +10,18 @@ from pyspark.sql.types import StructType, StructField, \
 # TableCollection class by table name
 
 
-class IngestionTable:
+class Table:
     """
-    Stores information about a table at Ingestion stage.
+    Stores information about a table ingested to HDFS.
     Should be instantiated by TableCollection class for data validation. 
 
     Properties:
     - tbl_name: Name of table.
     - csv_name: Name of the respective csv file.
     - schema_StructType: Table schema as StructType.
-
-    Methods:
-    - get_name(), get_csv_name(), get_schema_StructType(): Get methods.
+    - path_csv: Path of csv file in the local filesystem.
+    - hdfs_dir: Path of HDFS directory of table.
+    - hdfs_dir_uri: URI of HDFS directory of table.
     """
     def __init__(self, 
         tbl_name: str, 
@@ -30,16 +31,19 @@ class IngestionTable:
         self.tbl_name = tbl_name
         self.csv_name = csv_name
         self.schema_StructType = schema_StructType
+        self.path_csv = 'file://' + os.path.join(os.getcwd(), 'data', self.csv_name)
+        self.hdfs_dir = os.path.join('/data_lake', self.tbl_name)
+        self.hdfs_dir_uri = 'hdfs://localhost:9000/' + self.hdfs_dir
 
 
 class TableCollection:
     """
-    Contains information of tables in Ingestion stage.
+    Contains information of ingested tables in HDFS.
     Can be used to generate table.
 
     Methods:
     - get_tbl_names(): Get all table names in collection.
-    - generate(): Create a table at Ingestion stage.
+    - get_tbl(): Create a table at Ingestion stage.
     """
     _tbl_info = {
         'customers': {
@@ -147,7 +151,7 @@ class TableCollection:
         """
         return list(TableCollection._tbl_info.keys())
 
-    def get_tbl(self, tbl_name: str) -> IngestionTable:
+    def get_tbl(self, tbl_name: str) -> Table:
         """
         Gets IngestionTable object by table name
         """
@@ -155,8 +159,8 @@ class TableCollection:
         if tbl_name not in TableCollection().get_tbl_names():
             raise ValueError('Table name must be within allowed values')
         
-        return IngestionTable(
+        return Table(
             tbl_name = tbl_name,
-            csv_name = TableCollection._tbl_info[tbl_name]["csv_name"],
-            schema_StructType = TableCollection._tbl_info[tbl_name]["schema_StructType"]
+            csv_name = TableCollection._tbl_info[tbl_name]['csv_name'],
+            schema_StructType = TableCollection._tbl_info[tbl_name]['schema_StructType']
         )
