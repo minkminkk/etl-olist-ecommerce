@@ -153,7 +153,7 @@ class TableCollection:
         """
         # Table name validation
         if tbl_name not in TableCollection().get_tbl_names():
-            raise ValueError('Table names must be within allowed values')
+            raise ValueError('Table name must be within allowed values')
         
         return IngestionTable(
             tbl_name = tbl_name,

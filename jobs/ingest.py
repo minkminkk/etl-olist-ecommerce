@@ -67,9 +67,7 @@ class Ingestion:
             new_records = spark_df.subtract(df_latest)
             if not new_records.isEmpty():
                 new_records.write.mode('append').parquet(path_hdfs_dir_uri)
-                print('>>>>> Updated', tbl_name)
-            else:
-                print('>>>>>', tbl_name, 'already up to date')
+            print('>>>>> Updated', tbl_name)
 
 
 if __name__ == '__main__':
