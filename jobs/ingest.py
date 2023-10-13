@@ -1,71 +1,75 @@
 from pyspark.sql import SparkSession
-from assets import schemas
+from assets.tables import TableCollection
 from typing import List
-from assets import utils
 import os
 import argparse
 
 
-def main(tbl_names: List[str]):
-    """
-    Read input csv files for the specified table names. Induce new records and write them into HDFS.
+class Ingestion:
+    def __init__(self, tbl_names: List[str]):
+        self.tbl_names = tbl_names
 
-    Arguments:
-    - tbl_names: Name of tables to be executed (--tbl_names in CLI).
-    Defaults to all tables available (specified in ./assets/utils.py)
+    def main(self):
+        """
+        Read input csv files for the specified table names. Induce new records and write them into HDFS.
 
-    Exceptions:
-    - If any tbl_name not available: ValueError.
+        Arguments:
+        - tbl_names: Name of tables to be executed (--tbl_names in CLI).
+        Defaults to all tables available (specified in ./assets/utils.py)
 
-    Usage: spark-submit ingest.py
-    """
-    # Table name validation
-    for tbl_name in tbl_names:
-        if tbl_name not in utils.get_available_tbl_names():
-            raise ValueError('Table names must be within allowed values: assets.utils.get_available_tbl_names()')
-    
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .appName('Data load - source to olist database') \
-        .getOrCreate()
-    
-    # Get FileSystem (specified by fs.defaultFS in core-site.xml - HDFS desired)
-    sc = spark.sparkContext
-    jvm = sc._jvm
-    jsc = sc._jsc
-    conf = jsc.hadoopConfiguration()
-    fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
+        Exceptions:
+        - If any tbl_name not available: ValueError.
 
-    # Working directories
-    path_wd = os.path.dirname(os.path.dirname(__file__))
-    path_data = os.path.join(path_wd, 'data')
-    
-    # Ingest csv data into HDFS for specified tables
-    for tbl_name in tbl_names:
-        # HDFS directory for each table
-        path_csv = 'file://' + os.path.join(path_data, utils.get_csvname_from_tblname(tbl_name))   # to specify files in local storage
-        tbl_schema = schemas.IngestionSchema(tbl_name).as_StructType()
-        path_hdfs_dir = '/data_lake/' + tbl_name
-        path_hdfs_dir_uri = 'hdfs://localhost:9000' + path_hdfs_dir
-
-        print('==================== PROCESSING', tbl_name, '====================')
-
-        # Read input csv file 
-        spark_df = spark.read.csv(path_csv, header = True, schema = tbl_schema)
+        Usage: spark-submit ingest.py
+        """
+        # Create SparkSession
+        spark = SparkSession.builder \
+            .appName('Data load - source to olist database') \
+            .getOrCreate()
         
-        # Get latest records in data lake, return empty dataframe with schema if records not found
-        if fs.exists(jvm.org.apache.hadoop.fs.Path(path_hdfs_dir + '/_SUCCESS')):
-            df_latest = spark.read.parquet(path_hdfs_dir_uri, schema = tbl_schema)
-        else:
-            df_latest = spark.createDataFrame([], schema = tbl_schema)
+        # Get FileSystem (specified by fs.defaultFS in core-site.xml - HDFS desired)
+        sc = spark.sparkContext
+        jvm = sc._jvm
+        jsc = sc._jsc
+        conf = jsc.hadoopConfiguration()
+        fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
 
-        # Load new records into data lake if there are any
-        new_records = spark_df.subtract(df_latest)
-        if not new_records.isEmpty():
-            new_records.write.mode('append').parquet(path_hdfs_dir_uri)
-            print('>>>>> Updated', tbl_name)
-        else:
-            print('>>>>>', tbl_name, 'already up to date') 
+        # Working directories
+        path_wd = os.path.dirname(os.path.dirname(__file__))
+        path_data = os.path.join(path_wd, 'data')
+        
+        # Ingest csv data into HDFS for specified tables
+        for tbl_name in self.tbl_names:
+            # Create table object:
+            tbl = TableCollection().get_tbl(tbl_name)
+
+            # HDFS directory for each table
+            path_csv = 'file://' + os.path.join(path_data, tbl.csv_name)
+            path_hdfs_dir = '/data_lake/' + tbl.tbl_name
+            path_hdfs_dir_uri = 'hdfs://localhost:9000' + path_hdfs_dir
+
+            print('==================== PROCESSING', tbl_name, '====================')
+
+            # Read input csv file 
+            spark_df = spark.read.csv(
+                path_csv, 
+                header = True, 
+                schema = tbl.schema_StructType
+            )
+            
+            # Get latest records in data lake, return empty dataframe with schema if records not found
+            if fs.exists(jvm.org.apache.hadoop.fs.Path(path_hdfs_dir + '/_SUCCESS')):
+                df_latest = spark.read.parquet(path_hdfs_dir_uri, schema = tbl.schema_StructType)
+            else:
+                df_latest = spark.createDataFrame([], schema = tbl.schema_StructType)
+
+            # Load new records into data lake if there are any
+            new_records = spark_df.subtract(df_latest)
+            if not new_records.isEmpty():
+                new_records.write.mode('append').parquet(path_hdfs_dir_uri)
+                print('>>>>> Updated', tbl_name)
+            else:
+                print('>>>>>', tbl_name, 'already up to date')
 
 
 if __name__ == '__main__':
@@ -74,9 +78,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if not args.tbl_names:  # Execute on all tables if --tbl_names not provided
-        args.tbl_names = utils.get_available_tbl_names()
+        args.tbl_names = TableCollection().get_tbl_names()
     
     import time
     start_time = time.time()
-    main(args.tbl_names)
+    Ingestion(args.tbl_names).main()
     print('>>>>> Execution time:', time.time() - start_time)
