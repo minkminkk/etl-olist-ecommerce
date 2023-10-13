@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
-from utils import schemas
+from assets import schemas
 from typing import List
-from utils import misc
+from assets import utils
 import os
 import argparse
 
@@ -11,8 +11,8 @@ def main(tbl_names: List[str]):
     Read input csv files for the specified table names. Induce new records and write them into HDFS.
 
     Arguments:
-    - tbl_names: Name of tables to be executed.
-    Input all available tables (specified in ./utils/misc.py) if not provided.
+    - tbl_names: Name of tables to be executed (--tbl_names in CLI).
+    Defaults to all tables available (specified in ./assets/utils.py)
 
     Exceptions:
     - If any tbl_name not available: ValueError.
@@ -21,8 +21,8 @@ def main(tbl_names: List[str]):
     """
     # Table name validation
     for tbl_name in tbl_names:
-        if tbl_name not in misc.get_available_tbl_names():
-            raise ValueError('Table names must be within allowed values: misc.get_available_tbl_names()')
+        if tbl_name not in utils.get_available_tbl_names():
+            raise ValueError('Table names must be within allowed values: assets.utils.get_available_tbl_names()')
     
     # Create SparkSession
     spark = SparkSession.builder \
@@ -43,7 +43,7 @@ def main(tbl_names: List[str]):
     # Ingest csv data into HDFS for specified tables
     for tbl_name in tbl_names:
         # HDFS directory for each table
-        path_csv = 'file://' + os.path.join(path_data, misc.get_csvname_from_tblname(tbl_name))   # to specify files in local storage
+        path_csv = 'file://' + os.path.join(path_data, utils.get_csvname_from_tblname(tbl_name))   # to specify files in local storage
         tbl_schema = schemas.IngestionSchema(tbl_name).as_StructType()
         path_hdfs_dir = '/data_lake/' + tbl_name
         path_hdfs_dir_uri = 'hdfs://localhost:9000' + path_hdfs_dir
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if not args.tbl_names:  # Execute on all tables if --tbl_names not provided
-        args.tbl_names = misc.get_available_tbl_names()
+        args.tbl_names = utils.get_available_tbl_names()
     
     import time
     start_time = time.time()
