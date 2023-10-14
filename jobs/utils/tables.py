@@ -34,6 +34,8 @@ class Table:
         self.path_csv = 'file://' + os.path.join(os.getcwd(), 'data', self.csv_name)
         self.hdfs_dir = os.path.join('/data_lake', self.tbl_name)
         self.hdfs_dir_uri = 'hdfs://localhost:9000/' + self.hdfs_dir
+        self.hive_dir = os.path.join('/data_warehouse', self.tbl_name)
+        self.hive_dir_uri = 'hdfs://localhost:9000/' + self.hdfs_dir
 
 
 class TableCollection:
@@ -153,7 +155,7 @@ class TableCollection:
 
     def get_tbl(self, tbl_name: str) -> Table:
         """
-        Gets IngestionTable object by table name
+        Gets Table object by table name
         """
         # Table name validation
         if tbl_name not in TableCollection().get_tbl_names():

@@ -6,8 +6,7 @@ import argparse
 
 def main(tbl_names: List[str]):
     """
-    Read input csv files for the specified table names. 
-    Induce new records and write them into HDFS.
+    Read input csv files for the specified table names. Induce new records and write them into HDFS.
 
     Arguments:
     - tbl_names: Name of tables to be executed (--tbl_names in CLI).
@@ -28,7 +27,7 @@ def main(tbl_names: List[str]):
             # Create table object:
             tbl = TableCollection().get_tbl(tbl_name)
 
-            print('========== PROCESSING', tbl_name, '==========')
+            print('INGESTION: Processing', tbl_name)
             # Read input csv file 
             spark_df = spark.read.csv(
                 tbl.path_csv, 
@@ -57,7 +56,7 @@ def main(tbl_names: List[str]):
             new_records = spark_df.subtract(df_latest)
             if not new_records.isEmpty():
                 new_records.write.mode('append').parquet(tbl.hdfs_dir_uri)
-                print('>>>>> Updated', tbl_name)
+                print('COMPLETED: Updated', tbl_name)
 
 
 if __name__ == '__main__':
@@ -74,4 +73,4 @@ if __name__ == '__main__':
     import time
     start_time = time.time()
     main(args.tbl_names)
-    print('>>>>> Execution time:', time.time() - start_time)
+    print('PROGRAM FINISHED: Took', time.time() - start_time)
