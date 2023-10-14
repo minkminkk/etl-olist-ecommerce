@@ -1,22 +1,29 @@
-from pyspark.sql import SparkSession
+from utils.spark_hadoop import get_spark_hadoop
 from typing import List
 import argparse
 
 
-def main():
+def main(tbl_names: List[str]):
     """
-    """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .appName('Data load - source to olist database') \
-        .getOrCreate()
+    Transform tables in HDFS for DWH loading.
+
+    Arguments:
+    - tbl_names: Name of tables to be executed (--tbl_names in CLI).
     
-    # Get FileSystem (specified by fs.defaultFS in core-site.xml - HDFS desired)
-    sc = spark.sparkContext
-    jvm = sc._jvm
-    jsc = sc._jsc
-    conf = jsc.hadoopConfiguration()
-    fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
+    Default tables:
+    - customers
+    - orders
+    - order_items
+    - order_products
+    - order_reviews
+
+    Usage: spark-submit transform.py [--tbl_names tbl1 tbl2]
+    """
+    with get_spark_hadoop(
+        app_name = 'Transform raw data', 
+        hive_enabled = True
+    ) as spark_hadoop:
+        pass
 
 
 def transform_orders():
@@ -40,13 +47,19 @@ def transform_customers():
 
 
 if __name__ == '__main__':
+    # Parse CLI arguments into args
     parser = argparse.ArgumentParser()
     parser.add_argument('--tbl_names', type = str, nargs = '*')
     args = parser.parse_args()
     
-    if not args.tbl_names:  # Table to execute if --tbl_names not provided
-        args.tbl_names = ['orders', 'order_items', 'order_payments', 'order_reviews', 'customers']
-
+    # Execute on all tables if --tbl_names not provided
+    if not args.tbl_names:
+        args.tbl_names = [
+            'orders', 'order_items', 'order_payments', 
+            'order_reviews', 'customers'
+        ]
+    
+    # Track execution time
     import time
     start_time = time.time()
     main(args.tbl_names)
