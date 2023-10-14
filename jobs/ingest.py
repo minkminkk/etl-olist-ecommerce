@@ -17,18 +17,6 @@ def main(tbl_names: List[str]):
 
     Usage: spark-submit ingest.py [--tbl_names tbl1 tbl2]
     """
-    # # Create SparkSession
-    # spark = SparkSession.builder \
-    #     .appName('Data load - source to olist database') \
-    #     .getOrCreate()
-    
-    # # Get FileSystem (specified by fs.defaultFS in core-site.xml - HDFS desired)
-    # sc = spark.sparkContext
-    # jvm = sc._jvm
-    # jsc = sc._jsc
-    # conf = jsc.hadoopConfiguration()
-    # fs = jvm.org.apache.hadoop.fs.FileSystem.get(conf)
-
     with get_spark_session_hdfs('Data load - source to olist database') as spark_hdfs:
         spark = spark_hdfs.spark
         
