@@ -6,7 +6,8 @@ import argparse
 
 def main(tbl_names: List[str]):
     """
-    Read input csv files for the specified table names. Induce new records and write them into HDFS.
+    Read input csv files for the specified table names. 
+    Induce new records and write them into HDFS.
 
     Arguments:
     - tbl_names: Name of tables to be executed (--tbl_names in CLI).
@@ -18,10 +19,8 @@ def main(tbl_names: List[str]):
     Usage: spark-submit ingest.py [--tbl_names tbl1 tbl2]
     """
     with get_spark_hadoop(
-        'Data load - source to olist database'
+        'Data load - CSV source to HDFS'
     ) as spark_hadoop:
-        spark = spark_hadoop.spark
-        
         # Ingest csv data into HDFS for specified tables
         for tbl_name in tbl_names:
             # Create table object:
@@ -29,25 +28,24 @@ def main(tbl_names: List[str]):
 
             print('INGESTION: Processing', tbl_name)
             # Read input csv file 
-            spark_df = spark.read.csv(
+            spark_df = spark_hadoop.spark.read.csv(
                 tbl.path_csv, 
                 header = True, 
                 schema = tbl.schema_StructType
             )
             
-            # Get latest records in data lake, return empty dataframe 
-            # with schema if records not found
+            # Get latest records in data lake
             if spark_hadoop.fs.exists(
                 spark_hadoop.jvm.org.apache.hadoop.fs.Path(
                     tbl.hdfs_dir + '/_SUCCESS'
                 )
             ):
-                df_latest = spark.read.parquet(
+                df_latest = spark_hadoop.spark.read.parquet(
                     tbl.hdfs_dir_uri, 
                     schema = tbl.schema_StructType
                 )
-            else:
-                df_latest = spark.createDataFrame(
+            else:   # Get empty DataFrame if records not found
+                df_latest = spark_hadoop.spark.createDataFrame(
                     [], 
                     schema = tbl.schema_StructType
                 )
@@ -55,7 +53,7 @@ def main(tbl_names: List[str]):
             # Load new records into data lake if there are any
             new_records = spark_df.subtract(df_latest)
             if not new_records.isEmpty():
-                new_records.write.mode('append').parquet(tbl.hdfs_dir_uri)
+                new_records.write.mode('append').parquet(tbl.hdfs_dir_uri)  #TODO: CDC on order_status (orders)
                 print('COMPLETED: Updated', tbl_name)
 
 

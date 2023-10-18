@@ -1,5 +1,14 @@
 from pyspark.sql import SparkSession
+from pyspark import SparkConf
 from contextlib import contextmanager
+
+
+"""
+This file contains objects related to SparkSession and hadoopConfiguration 
+(e.g. sparkContext, jvm, jsc, conf, fs), stored in SparkHadoop class.
+
+SparkHadoop class does include Hive support, specified via get_spark_hadoop()
+"""
 
 
 class SparkHadoop:
@@ -9,6 +18,7 @@ class SparkHadoop:
     Properties:
     - spark: Current SparkSession.
     - jvm, jsc, conf, fs: Java-side objects.
+    - hive_enabled: Enable Hive in session or not.
     """
     def __init__(self, spark: SparkSession, hive_enabled: bool = False):
         self.spark = spark
@@ -30,16 +40,22 @@ def get_spark_hadoop(app_name: str, hive_enabled: bool = False) -> SparkHadoop:
     - app_name: Name of Spark application.
     - hive_enabled: Enable Hive in session or not.
 
-    Returns a SparkHDFS object of the Spark app with app_name.
+    Returns a SparkHadoop object of the Spark app with app_name.
 
     Usage:
-    with get_spark_session_hdfs('my_app') as spark, fs:
+    with get_spark_hadoop('my_app') as spark_hadoop:
+        spark = spark_hadoop.spark
         ...
     """
+    # Modify config for Spark
+    conf = SparkConf()
+    conf.set('fs.defaultFS', 'hdfs://0.0.0.0:9000/')
+    conf.set('spark.sql.warehouse.dir', '/data_warehouse')
+    conf.set('spark.hive.exec.dynamic.partition.mode', 'nonstrict')
+
     # Create SparkSession
-    spark = SparkSession.builder \
-        .appName(app_name)
-    
+    #TODO: Change to Postgres as DWH
+    spark = SparkSession.builder.appName(app_name).config(conf = conf)
     if hive_enabled:
         spark = spark.enableHiveSupport().getOrCreate()
     else:
